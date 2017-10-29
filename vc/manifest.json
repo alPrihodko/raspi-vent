@@ -1,0 +1,7 @@
+{
+  "name": "irr",
+  "short_name": "irr",
+  "description": "Irrigation control",
+  "start_url": "/",
+  "display": "standalone"
+}

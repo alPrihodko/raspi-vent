@@ -1,0 +1,240 @@
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/font-roboto/roboto.html">
+<link rel="import" href="../../bower_components/app-layout/app-layout.html">
+
+<link rel="import" href="../../bower_components/paper-material/paper-material.html">
+<link rel="import" href="../../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../../bower_components/paper-radio-button/paper-radio-button.html">
+<link rel="import" href="../../bower_components/paper-radio-group/paper-radio-group.html">
+
+
+<link rel="import" href="../../bower_components/paper-slider/paper-slider.html">
+
+<!-- link rel="import" href="../../bower_components/app-layout/app-drawer-layout/app-drawer-layout.html"-->
+<link rel="import" href="../../bower_components/app-layout/app-drawer/app-drawer.html">
+
+<link rel="import" href="../../bower_components/app-layout/app-scroll-effects/effects/waterfall.html">
+
+<link rel="import" href="../../bower_components/app-layout/app-header/app-header.html">
+<!-- link rel="import" href="../../bower_components/app-layout/app-header-layout/app-header-layout.html"-->
+<link rel="import" href="../../bower_components/app-layout/app-toolbar/app-toolbar.html">
+
+<link rel="import" href="../../bower_components/paper-icon-button/paper-icon-button.html">
+
+<link rel="import" href="../../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../../bower_components/iron-icons/image-icons.html">
+
+<link rel="import" href="../../bower_components/iron-ajax/iron-ajax.html">
+
+<link rel="import" href="relay-state/relay-state.html">
+<link rel="import" href="irr-state/irr-state.html">
+<link rel="import" href="history-data/history-data.html">
+
+<script src="../app.js"></script>
+
+<dom-module id="irr-app">
+    <template>
+    <style>
+        :host {
+             display: block;
+             padding: 16px;
+             font-family: 'Roboto', 'Noto', sans-serif;
+             background-color: #eee;
+          }
+
+          app-header {
+            background-color: #22AFFF;
+            color: #fff;
+          }
+          app-header paper-icon-button {
+            --paper-icon-button-ink-color: #fff;
+          }
+          app-drawer-layout {
+            --app-drawer-layout-content-transition: margin 0.2s;
+          }
+
+
+          app-drawer {
+            --app-drawer-scrim-background: rgba(0, 0, 100, 0.5);
+            --app-drawer-content-container: {
+              background-color: #B0BEC5;
+            }
+          }
+
+          .drawer-content {
+            padding: 16px;
+            overflow: auto;
+          }
+
+          .card-content {
+              font-size: 15px;
+              min-width: 15px;
+              min-height: 15px;
+              vertical-align: middle;
+              text-align: center;
+              padding: 5px;
+              margin: 5px;
+              display: inline-block;
+          }
+
+          .title {
+              vertical-align: middle;
+              padding: 5px;
+              min-width: 220px;
+              display: inline-block;
+          }
+
+
+    </style>
+
+    <app-header reveals effects="waterfall">
+        <app-toolbar>
+          <paper-icon-button id="toggle" icon="menu"></paper-icon-button>
+          <div main-title>[[apptitle]] </div>
+
+        </app-toolbar>
+          </app-header>
+          <irr-state id="currentstate"></irr-state>
+          <br/>
+          <history-data  id="historydata"></history-data>
+          <app-drawer id="drawer" swipe-open>
+              <div class="drawer-content">
+              <h2>[[apptitle]]</h2>
+              <hr/>
+              <br/>
+              <relay-state id="garden" xid="garden" name="Город"></relay-state>
+              <br/>
+              <br/>
+              <relay-state id="flowerbad" xid="flowerbad" name="Палісад"></relay-state>
+
+              <br/>
+              <br/>
+              <relay-state id="grapes" xid="grapes" name="Виноградник"></relay-state>
+
+            </div>
+          </app-drawer>
+
+
+  </template>
+
+    <script>
+        class MyApplication extends Polymer.Element {
+            static get is() {
+                return 'irr-app';
+            }
+            static get properties() {
+                return {
+                    apptitle: {
+                        type: String,
+                        value: 'Relay control'
+                    },
+                    host: {
+                        type: String
+                        //value: "sasha123.ddns.ukrtel.net:1234"
+                    },
+                };
+            }
+
+            constructor() {
+                super();
+                this.host = StaticGlobals.GetHostName();
+                //console.log(this.host);
+            };
+
+            ready() {
+                super.ready();
+                var drawer = this.$.drawer;
+                this.$.toggle.addEventListener('tap', function() {
+                    drawer.toggle();
+                });
+
+                this.disable();
+                this._wsconnect("ws://" + this.host + "/relays", this._rhandler, this);
+            };
+
+            _wsconnect(wsurl, handler, ctx) {
+                var ws = null;
+
+                if (ws) {
+                    ws.close(3001);
+                } else {
+                    ws = new WebSocket(wsurl);
+                    ws.onopen = function() {
+                        console.log("Connection: " + wsurl + " Opened");
+                        ctx.enable();
+                    };
+
+                    ws.onmessage = function(msg) {
+                        console.log(msg);
+                        handler(msg.data, ctx);
+                    };
+
+                    ws.onclose = function(evt) {
+                        ws = null;
+                        ctx.disable();
+                        console.log('ws error: ' + evt.type);
+                        setTimeout(function() {
+                            ctx._wsconnect(wsurl, handler, ctx)
+                        }, 30000);
+                    };
+
+                    ws.onerror = function(evt) {
+                        if (ws.readyState == 1) {
+                            console.log('ws error: ' + evt.type);
+                        }
+                        ctx.disable();
+                    };
+                }
+            };
+
+            disable() {
+                this.$.garden.disable();
+                this.$.flowerbad.disable();
+                this.$.grapes.disable();
+            };
+
+            enable() {
+              this.$.garden.enable();
+              this.$.flowerbad.enable();
+              this.$.grapes.enable();
+            };
+
+            _rhandler(msg, ctx) {
+                //alert(msg)
+                var o = JSON.parse(msg);
+                console.log("value: " + o.Value);
+
+                switch (o.Type) {
+                    case "relayStateChanged":
+                        //ctx._setBoilerPumpStatus(o.Value);
+                        ctx.$.currentstate.update();
+                        ctx.$.historydata.update();
+                        switch (o.Value) {
+                          case "garden":
+                            ctx.$.garden.update();
+                            break;
+                          case "kitchen":
+                            ctx.$.kitchen.update();
+                            break;
+                          case "flowerbad":
+                            ctx.$.flowerbad.update();
+                            break;
+                          case "grapes":
+                            ctx.$.grapes.update();
+                            break;
+
+                          default:
+                        }
+                        break;
+
+                    default:
+
+                };
+
+            };
+
+        }
+
+        window.customElements.define(MyApplication.is, MyApplication);
+    </script>
+</dom-module>

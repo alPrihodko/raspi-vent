@@ -1,0 +1,18 @@
+[Unit]
+Description=raspi-vent
+After=rc-local.service
+
+
+[Service]
+Type=simple
+EnvironmentFile=
+WorkingDirectory=/home/pi/raspi-vent
+ExecStart=/usr/local/bin/raspi-vent
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=control-group
+RestartSec=10
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+Alias=rapi-vent.service
